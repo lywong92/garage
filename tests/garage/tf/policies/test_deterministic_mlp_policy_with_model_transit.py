@@ -1,13 +1,12 @@
 """
-Unit test for DeterministicMLPPolicyWithModel.
+Unit test for ContinuousMLPPolicyWithModel.
 
-This test consists of four different DeterministicMLPPolicy: P1, P2, P3
-and P4. P1 and P2 are from DeterministicMLPPolicy, which does not use
-garage.tf.models.MLPModel while P3 and P4 do use.
+This test consists of two DeterministicMLPPolicy: P1 and P2, and
+two ContinuousMLPPolicyWithModel: P1, P2, P3 and P4.
 
 This test ensures the outputs from all the policies are the same,
 for the transition from using DeterministicMLPPolicy to
-DeterministicMLPPolicyWithModel.
+ContinuousMLPPolicyWithModel.
 
 It covers get_action, get_actions, get_action_sym.
 """
@@ -17,13 +16,13 @@ import numpy as np
 import tensorflow as tf
 
 from garage.tf.envs import TfEnv
+from garage.tf.policies import ContinuousMLPPolicyWithModel
 from garage.tf.policies import DeterministicMLPPolicy
-from garage.tf.policies import DeterministicMLPPolicyWithModel
 from tests.fixtures import TfGraphTestCase
 from tests.fixtures.envs.dummy import DummyBoxEnv
 
 
-class TestDeterministicMLPPolicyWithModelTransit(TfGraphTestCase):
+class TestContinuousMLPPolicyWithModelTransit(TfGraphTestCase):
     @mock.patch('tensorflow.random.normal')
     def setUp(self, mock_rand):
         mock_rand.return_value = 0.5
@@ -33,9 +32,9 @@ class TestDeterministicMLPPolicyWithModelTransit(TfGraphTestCase):
             env_spec=self.box_env, hidden_sizes=(32, 32), name='P1')
         self.policy2 = DeterministicMLPPolicy(
             env_spec=self.box_env, hidden_sizes=(64, 64), name='P2')
-        self.policy3 = DeterministicMLPPolicyWithModel(
+        self.policy3 = ContinuousMLPPolicyWithModel(
             env_spec=self.box_env, hidden_sizes=(32, 32), name='P3')
-        self.policy4 = DeterministicMLPPolicyWithModel(
+        self.policy4 = ContinuousMLPPolicyWithModel(
             env_spec=self.box_env, hidden_sizes=(64, 64), name='P4')
 
         self.sess.run(tf.global_variables_initializer())
