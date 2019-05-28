@@ -1,9 +1,8 @@
-import shutil
 import tempfile
 
 import numpy as np
 
-from garage.experiment import LocalRunner, snapshotter
+from garage.experiment import LocalRunner, SnapshotConfig
 from garage.np.baselines import LinearFeatureBaseline
 from garage.tf.algos import VPG
 from garage.tf.envs import TfEnv
@@ -11,8 +10,8 @@ from garage.tf.policies import CategoricalMLPPolicy
 from tests.fixtures import TfGraphTestCase
 
 
-def fixture_exp():
-    with LocalRunner() as runner:
+def fixture_exp(snapshot_config):
+    with LocalRunner(snapshot_config=snapshot_config) as runner:
         env = TfEnv(env_name='CartPole-v1')
 
         policy = CategoricalMLPPolicy(
@@ -36,18 +35,17 @@ def fixture_exp():
 
 class TestResume(TfGraphTestCase):
     def test_resume(self):
-        # Manually create and remove temp folder
-        # Otherwise, tempfile unexpectedly removes folder in child folder
-        folder = tempfile.mkdtemp()
-        snapshotter.snapshot_dir = folder
-        snapshotter.snapshot_mode = 'last'
+        temp_dir = tempfile.TemporaryDirectory()
 
-        policy_params = fixture_exp()
+        snapshot_config = SnapshotConfig(
+            snapshot_dir=temp_dir.name, snapshot_mode='last', snapshot_gap=1)
+
+        policy_params = fixture_exp(snapshot_config)
         self.tearDown()
         self.setUp()
 
-        with LocalRunner() as runner:
-            args = runner.restore(folder)
+        with LocalRunner(snapshot_config) as runner:
+            args = runner.restore()
             assert np.isclose(
                 runner.policy.get_param_values(),
                 policy_params).all(), 'Policy parameters should persist'
@@ -72,4 +70,4 @@ class TestResume(TfGraphTestCase):
             self.assertEqual(runner.train_args.store_paths, True)
             self.assertEqual(runner.train_args.pause_for_plot, False)
 
-        shutil.rmtree(folder)
+        temp_dir.cleanup()

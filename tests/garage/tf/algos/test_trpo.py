@@ -31,7 +31,7 @@ class TestTRPO(TfGraphTestCase):
 
     def test_trpo_pendulum(self):
         """Test TRPO with Pendulum environment."""
-        with LocalRunner(self.sess) as runner:
+        with LocalRunner(sess=self.sess) as runner:
             algo = TRPO(
                 env_spec=self.env.spec,
                 policy=self.policy,

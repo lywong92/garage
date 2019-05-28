@@ -6,12 +6,13 @@ pipelines data between sampler and algorithm during training.
 """
 import copy
 import time
-from types import SimpleNamespace
+import types
+import warnings
 
 from dowel import logger, tabular
 import tensorflow as tf
 
-from garage.experiment import snapshotter
+from garage.experiment import SnapshotConfig, Snapshotter
 
 # Note: Optional module should be imported ad hoc to break circular dependency.
 
@@ -25,6 +26,25 @@ class LocalRunner:
 
     Use Runner.setup(algo, env) to setup algorithm and environement for runner
     and Runner.train() to start training.
+
+    Args:
+        snapshot_config (garage.experiment.SnapshotConfig): The snapshot
+            configuration used by LocalRunner. If None, the snapshotter won't
+            be created and nothing will be snapshot.
+        max_cpus (int): The maximum number of parallel sampler workers.
+        sess (tf.Session): An optional tensorflow session.
+              A new session will be created immediately if not provided.
+
+    Note:
+        The local runner will set up a joblib task pool of size max_cpus
+        possibly later used by BatchSampler. If BatchSampler is not used,
+        the processes in the pool will remain dormant.
+
+        This setup is required to use tensorflow in a multiprocess
+        environment before a tensorflow session is created
+        because tensorflow is not fork-safe.
+
+        See https://github.com/tensorflow/tensorflow/issues/2448.
 
     Examples:
         with LocalRunner() as runner:
@@ -44,26 +64,17 @@ class LocalRunner:
 
     """
 
-    def __init__(self, sess=None, max_cpus=1):
-        """Create a new local runner.
+    def __init__(self, snapshot_config=None, sess=None, max_cpus=1):
+        if isinstance(snapshot_config, SnapshotConfig):
+            self.snapshotter = Snapshotter(snapshot_config.snapshot_dir,
+                                           snapshot_config.snapshot_mode,
+                                           snapshot_config.snapshot_gap)
+        else:
+            if snapshot_config is not None:
+                warnings.warn('Snapshotter is not created. You must pass '
+                              'a correct SnapshotConfig to snapshot')
+            self.snapshotter = None
 
-        Args:
-            max_cpus(int): The maximum number of parallel sampler workers.
-            sess(tf.Session): An optional tensorflow session.
-                  A new session will be created immediately if not provided.
-
-        Note:
-            The local runner will set up a joblib task pool of size max_cpus
-            possibly later used by BatchSampler. If BatchSampler is not used,
-            the processes in the pool will remain dormant.
-
-            This setup is required to use tensorflow in a multiprocess
-            environment before a tensorflow session is created
-            because tensorflow is not fork-safe.
-
-            See https://github.com/tensorflow/tensorflow/issues/2448.
-
-        """
         if max_cpus > 1:
             from garage.sampler import singleton_pool
             singleton_pool.initialize(max_cpus)
@@ -136,7 +147,7 @@ class LocalRunner:
         logger.log(self.sess.graph)
         self.has_setup = True
 
-        self.setup_args = SimpleNamespace(
+        self.setup_args = types.SimpleNamespace(
             sampler_cls=sampler_cls, sampler_args=sampler_args)
 
     def initialize_tf_vars(self):
@@ -182,7 +193,7 @@ class LocalRunner:
             logger.log('Obtaining samples...')
         return self.sampler.obtain_samples(itr, batch_size)
 
-    def save(self, epoch, paths=None):
+    def _save(self, epoch, paths=None):
         """Save snapshot of current batch.
 
         Args:
@@ -193,28 +204,28 @@ class LocalRunner:
         """
         assert self.has_setup
 
-        logger.log('Saving snapshot...')
+        if self.snapshotter is not None:
+            logger.log('Saving snapshot...')
 
-        params = dict()
-        # Save arguments
-        params['setup_args'] = self.setup_args
-        params['train_args'] = self.train_args
+            params = dict()
+            # Save arguments
+            params['setup_args'] = self.setup_args
+            params['train_args'] = self.train_args
 
-        # Save states
-        params['env'] = self.env
-        params['algo'] = self.algo
-        if paths:
-            params['paths'] = paths
-        params['last_epoch'] = epoch
-        snapshotter.save_itr_params(epoch, params)
+            # Save states
+            params['env'] = self.env
+            params['algo'] = self.algo
+            if paths:
+                params['paths'] = paths
+            params['last_epoch'] = epoch
+            self.snapshotter.save_itr_params(epoch, params)
 
-        logger.log('Saved')
+            logger.log('Saved')
 
-    def restore(self, snapshot_dir, from_epoch='last'):
+    def restore(self, from_epoch='last'):
         """Restore experiment from snapshot.
 
         Args:
-            snapshot_dir(str): Directory of snapshot.
             from_epoch(str or int): The epoch to restore from.
                 Can be 'first', 'last' or a number.
                 Not applicable when snapshot_mode='last'.
@@ -225,12 +236,12 @@ class LocalRunner:
         Examples:
             1. Resume experiment immediately.
             with LocalRunner() as runner:
-                runner.restore(snapshot_dir)
+                runner.restore()
                 runner.resume()
 
             2. Resume experiment with modified training arguments.
              with LocalRunner() as runner:
-                runner.restore(snapshot_dir, resume_now=False)
+                runner.restore()
                 runner.resume(n_epochs=20)
 
         Note:
@@ -241,8 +252,11 @@ class LocalRunner:
             specify manually or through run_experiment() interface.
 
         """
-        snapshotter.snapshot_dir = snapshot_dir
-        saved = snapshotter.load(from_epoch)
+        assert self.snapshotter is not None, (
+            'You must specify SnapshotConfig in LocalRunner construction '
+            'to create self.snapshotter before restore()')
+
+        saved = self.snapshotter.load(from_epoch)
 
         self.setup_args = saved['setup_args']
         self.train_args = saved['train_args']
@@ -261,7 +275,8 @@ class LocalRunner:
         pause_for_plot = self.train_args.pause_for_plot
 
         fmt = '{:<20} {:<15}'
-        logger.log('Restore from snapshot saved in %s' % snapshot_dir)
+        logger.log('Restore from snapshot saved in %s' %
+                   self.snapshotter.snapshot_dir)
         logger.log(fmt.format('Train Args', 'Value'))
         logger.log(fmt.format('n_epochs', n_epochs))
         logger.log(fmt.format('last_epoch', last_epoch))
@@ -311,11 +326,10 @@ class LocalRunner:
             The average return in last epoch cycle.
 
         """
-        assert self.has_setup, ('Use Runner.setup() to setup runner before '
-                                'training.')
+        assert self.has_setup, 'Use setup() to setup runner before training.'
 
         # Save arguments for restore
-        self.train_args = SimpleNamespace(
+        self.train_args = types.SimpleNamespace(
             n_epochs=n_epochs,
             n_epoch_cycles=n_epoch_cycles,
             batch_size=batch_size,
@@ -363,7 +377,7 @@ class LocalRunner:
                     yield epoch
                     save_path = (self.step_path
                                  if self.train_args.store_paths else None)
-                    self.save(epoch, save_path)
+                    self._save(epoch, save_path)
                     self.log_diagnostics(self.train_args.pause_for_plot)
                     logger.dump_all(self.step_itr)
                     tabular.clear()

@@ -18,7 +18,7 @@ from dowel import logger
 import psutil
 
 from garage import config
-from garage.experiment import deterministic, snapshotter
+from garage.experiment import deterministic, SnapshotConfig
 from garage.experiment.experiment import concretize
 from garage.experiment.local_tf_runner import LocalRunner
 from garage.misc.console import colorize
@@ -120,7 +120,8 @@ def run_experiment(argv):
         type=ast.literal_eval,
         default=False,
         help='Print only the tabular log information (in a horizontal format)')
-    parser.add_argument('--seed', type=int, help='Random seed for numpy')
+    parser.add_argument(
+        '--seed', type=int, default=1, help='Random seed for numpy')
     parser.add_argument(
         '--args_data', type=str, help='Pickled data for objects')
     parser.add_argument(
@@ -182,16 +183,17 @@ def run_experiment(argv):
     logger.add_output(dowel.CsvOutput(tabular_log_file))
     logger.add_output(dowel.TensorBoardOutput(log_dir))
     logger.add_output(dowel.StdOutput())
-    prev_snapshot_dir = snapshotter.snapshot_dir
-    prev_mode = snapshotter.snapshot_mode
-    snapshotter.snapshot_dir = log_dir
-    snapshotter.snapshot_mode = args.snapshot_mode
-    snapshotter.snapshot_gap = args.snapshot_gap
+
     logger.push_prefix('[%s] ' % args.exp_name)
 
+    snapshot_config = SnapshotConfig(
+        snapshot_dir=log_dir,
+        snapshot_mode=args.snapshot_mode,
+        snapshot_gap=args.snapshot_gap)
+
     if args.resume_from_dir is not None:
-        with LocalRunner() as runner:
-            runner.restore(args.resume_from_dir, from_epoch=args.resume_epoch)
+        with LocalRunner(snapshot_config=snapshot_config) as runner:
+            runner.restore(from_epoch=args.resume_epoch)
             runner.resume()
     else:
         # read from stdin
@@ -199,7 +201,7 @@ def run_experiment(argv):
             import cloudpickle
             method_call = cloudpickle.loads(base64.b64decode(args.args_data))
             try:
-                method_call(variant_data)
+                method_call(snapshot_config, variant_data)
             except BaseException:
                 children = garage.plotter.Plotter.get_plotters()
                 children += garage.tf.plotter.Plotter.get_plotters()
@@ -214,8 +216,6 @@ def run_experiment(argv):
                 for _ in maybe_iter:
                     pass
 
-    snapshotter.snapshot_mode = prev_mode
-    snapshotter.snapshot_dir = prev_snapshot_dir
     logger.remove_all()
     logger.pop_prefix()
 

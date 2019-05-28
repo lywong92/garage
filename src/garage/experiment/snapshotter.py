@@ -1,4 +1,4 @@
-"""Allows the taking of snapshots."""
+import collections
 import errno
 import os
 from os import listdir
@@ -8,85 +8,74 @@ import re
 
 import joblib
 
-from garage.misc.console import mkdir_p
+SnapshotConfig = collections.namedtuple(
+    'SnapshotConfig', ['snapshot_dir', 'snapshot_mode', 'snapshot_gap'])
 
 
 class Snapshotter:
-    """This class handles the creation of snapshots."""
+    """The Snapshotter allows the taking of snapshots.
 
-    def __init__(self):
-        self.reset()
+    Args:
+        snapshot_dir (str): Path to save the log and iteration snapshot.
+        snapshot_mode (str): Mode to save the snapshot. Can be either "all"
+            (all iterations will be saved), "last" (only the last iteration
+            will be saved), "gap" (every snapshot_gap iterations are saved),
+            or "none" (do not save snapshots).
+        snapshot_gap (int): Gap between snapshot iterations. Wait this number
+            of iterations before taking another snapshot.
 
-    def reset(self):
-        """Reset the snapshotter to default settings."""
-        self._snapshot_dir = None
-        self._snapshot_mode = 'all'
-        self._snapshot_gap = 1
+    """
+
+    def __init__(self, snapshot_dir=None, snapshot_mode='all', snapshot_gap=1):
+        self._snapshot_dir = snapshot_dir
+        self._snapshot_mode = snapshot_mode
+        self._snapshot_gap = snapshot_gap
 
     @property
     def snapshot_dir(self, ):
-        """Save snapshots in this directory."""
+        """Return the directory of snapshot."""
         return self._snapshot_dir
-
-    @snapshot_dir.setter
-    def snapshot_dir(self, dir_name):
-        mkdir_p(dir_name)
-        self._snapshot_dir = dir_name
 
     @property
     def snapshot_mode(self, ):
-        """Take this type of snapshot.
-
-        See save_itr_params.
-        """
+        """Return the type of snapshot."""
         return self._snapshot_mode
-
-    @snapshot_mode.setter
-    def snapshot_mode(self, mode):
-        self._snapshot_mode = mode
 
     @property
     def snapshot_gap(self, ):
-        """Wait this number of iterations before taking another snapshot."""
+        """Return the wait number of snapshot."""
         return self._snapshot_gap
-
-    @snapshot_gap.setter
-    def snapshot_gap(self, gap):
-        self._snapshot_gap = gap
 
     def save_itr_params(self, itr, params):
         """Save the parameters if at the right iteration."""
-        if self._snapshot_dir:
-            file_name = None
+        file_name = None
 
-            if self._snapshot_mode == 'all':
+        if self._snapshot_mode == 'all':
+            file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
+        elif self._snapshot_mode == 'last':
+            # override previous params
+            file_name = osp.join(self._snapshot_dir, 'params.pkl')
+        elif self._snapshot_mode == 'gap':
+            if itr % self._snapshot_gap == 0:
                 file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
-            elif self._snapshot_mode == 'last':
-                # override previous params
-                file_name = osp.join(self._snapshot_dir, 'params.pkl')
-            elif self._snapshot_mode == 'gap':
-                if itr % self._snapshot_gap == 0:
-                    file_name = osp.join(self._snapshot_dir,
-                                         'itr_%d.pkl' % itr)
-            elif self._snapshot_mode == 'gap_and_last':
-                if itr % self._snapshot_gap == 0:
-                    file_name = osp.join(self._snapshot_dir,
-                                         'itr_%d.pkl' % itr)
-                file_name_last = osp.join(self._snapshot_dir, 'params.pkl')
-                with open(file_name_last, 'wb') as file:
-                    pickle.dump(params, file)
-            elif self._snapshot_mode == 'none':
-                pass
-            else:
-                raise ValueError('Invalid snapshot mode {}'.format(
-                    self._snapshot_mode))
+        elif self._snapshot_mode == 'gap_and_last':
+            if itr % self._snapshot_gap == 0:
+                file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
+            file_name_last = osp.join(self._snapshot_dir, 'params.pkl')
+            with open(file_name_last, 'wb') as file:
+                pickle.dump(params, file)
+        elif self._snapshot_mode == 'none':
+            pass
+        else:
+            raise ValueError('Invalid snapshot mode {}'.format(
+                self._snapshot_mode))
 
-            if file_name:
-                with open(file_name, 'wb') as file:
-                    pickle.dump(params, file)
+        if file_name:
+            with open(file_name, 'wb') as file:
+                pickle.dump(params, file)
 
     def load(self, itr='last'):
-        r"""Load one snapshot of parameters from disk.
+        """Load one snapshot of parameters from disk.
 
         Args:
             itr(int or string): Iteration to load.
@@ -122,6 +111,3 @@ class Snapshotter:
 
         with open(snapshot_file, 'rb') as file:
             return joblib.load(file)
-
-
-snapshotter = Snapshotter()

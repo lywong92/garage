@@ -5,7 +5,7 @@ from dowel import logger
 import joblib
 import tensorflow as tf
 
-from garage.experiment import LocalRunner, snapshotter
+from garage.experiment import LocalRunner, SnapshotConfig
 from garage.np.baselines import LinearFeatureBaseline
 from garage.sampler.utils import rollout
 from garage.tf.algos import TRPO
@@ -27,24 +27,18 @@ class TestSnapshot(TfGraphTestCase):
     @classmethod
     def setUpClass(cls):
         cls.reset_tf()
-        cls.log_dir = tempfile.TemporaryDirectory()
-        cls.prev_log_dir = snapshotter.snapshot_dir
-        cls.prev_mode = snapshotter.snapshot_mode
-
-        snapshotter.snapshot_dir = cls.log_dir.name
-        snapshotter.snapshot_mode = 'all'
-
         logger.add_output(NullOutput())
 
     @classmethod
     def tearDownClass(cls):
-        snapshotter.snapshot_dir = cls.prev_log_dir
-        snapshotter.snapshot_mode = cls.prev_mode
         logger.remove_all()
-        cls.log_dir.cleanup()
 
     def test_snapshot(self):
-        with LocalRunner() as runner:
+        temp_dir = tempfile.TemporaryDirectory()
+
+        snapshot_config = SnapshotConfig(
+            snapshot_dir=temp_dir.name, snapshot_mode='all', snapshot_gap=1)
+        with LocalRunner(snapshot_config=snapshot_config) as runner:
             env = TfEnv(env_name='CartPole-v1')
 
             policy = CategoricalMLPPolicy(
@@ -71,7 +65,7 @@ class TestSnapshot(TfGraphTestCase):
             self.reset_tf()
             with LocalRunner():
                 snapshot = joblib.load(
-                    osp.join(self.log_dir.name, 'itr_{}.pkl'.format(i)))
+                    osp.join(temp_dir.name, 'itr_{}.pkl'.format(i)))
 
                 env = snapshot['env']
                 algo = snapshot['algo']
@@ -80,3 +74,5 @@ class TestSnapshot(TfGraphTestCase):
                 assert algo.policy
 
                 rollout(env, algo.policy, animated=False)
+
+        temp_dir.cleanup()

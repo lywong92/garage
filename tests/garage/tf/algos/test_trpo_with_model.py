@@ -18,7 +18,7 @@ from tests.fixtures import TfGraphTestCase
 
 class TestTRPO(TfGraphTestCase):
     def test_trpo_lstm_cartpole(self):
-        with LocalRunner(self.sess) as runner:
+        with LocalRunner(sess=self.sess) as runner:
             env = TfEnv(normalize(gym.make('CartPole-v1')))
 
             policy = CategoricalLSTMPolicyWithModel(
@@ -46,7 +46,7 @@ class TestTRPO(TfGraphTestCase):
     test_trpo_lstm_cartpole.large = True
 
     def test_trpo_gru_cartpole(self):
-        with LocalRunner(self.sess) as runner:
+        with LocalRunner(sess=self.sess) as runner:
             env = TfEnv(normalize(gym.make('CartPole-v1')))
 
             policy = CategoricalGRUPolicyWithModel(

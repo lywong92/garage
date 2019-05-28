@@ -32,7 +32,7 @@ class TestPPO(TfGraphTestCase):
 
     def test_ppo_pendulum(self):
         """Test PPO with Pendulum environment."""
-        with LocalRunner(self.sess) as runner:
+        with LocalRunner(sess=self.sess) as runner:
             algo = PPO(
                 env_spec=self.env.spec,
                 policy=self.policy,

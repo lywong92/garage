@@ -46,8 +46,4 @@ def run_task(*_):
         runner.train(n_epochs=100, batch_size=4000, plot=False)
 
 
-run_experiment(
-    run_task,
-    snapshot_mode='last',
-    seed=1,
-)
+run_experiment(run_task, snapshot_mode='last', seed=1)

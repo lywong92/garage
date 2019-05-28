@@ -71,7 +71,7 @@ def run_task(*_):
 
         runner.setup(algo=ddpg, env=env)
 
-        runner.train(n_epochs=50, n_epoch_cycles=20)
+        runner.train(n_epochs=50, n_epoch_cycles=20, batch_size=100)
 
 
 run_experiment(run_task, snapshot_mode='last', seed=1)
