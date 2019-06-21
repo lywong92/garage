@@ -1,5 +1,5 @@
 """CategoricalGRUPolicy with model."""
-from akro.tf import Discrete
+from akro import Discrete
 import numpy as np
 import tensorflow as tf
 
@@ -15,7 +15,7 @@ class CategoricalGRUPolicyWithModel(StochasticPolicy2):
     A policy that contains a GRU to make prediction based on
     a categorical distribution.
 
-    It only works with akro.tf.Discrete action space.
+    It only works with akro.Discrete action space.
 
     Args:
         env_spec (garage.envs.env_spec.EnvSpec): Environment specification.
@@ -73,7 +73,7 @@ class CategoricalGRUPolicyWithModel(StochasticPolicy2):
                  layer_normalization=False):
         if not isinstance(env_spec.action_space, Discrete):
             raise ValueError('CategoricalGRUPolicy only works'
-                             'with akro.tf.Discrete action space.')
+                             'with akro.Discrete action space.')
 
         super().__init__(name, env_spec)
         self._obs_dim = env_spec.observation_space.flat_dim

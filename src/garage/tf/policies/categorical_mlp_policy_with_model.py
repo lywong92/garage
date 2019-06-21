@@ -1,5 +1,5 @@
 """CategoricalMLPPolicy with model."""
-from akro.tf import Discrete
+from akro import Discrete
 import tensorflow as tf
 
 from garage.misc.overrides import overrides
@@ -15,7 +15,7 @@ class CategoricalMLPPolicyWithModel(StochasticPolicy2):
     A policy that contains a MLP to make prediction based on
     a categorical distribution.
 
-    It only works with akro.tf.Discrete action space.
+    It only works with akro.Discrete action space.
 
     Args:
         env_spec (garage.envs.env_spec.EnvSpec): Environment specification.
@@ -58,7 +58,7 @@ class CategoricalMLPPolicyWithModel(StochasticPolicy2):
                  layer_normalization=False):
         assert isinstance(
             env_spec.action_space,
-            Discrete), ('CategoricalMLPPolicy only works with akro.tf.Discrete'
+            Discrete), ('CategoricalMLPPolicy only works with akro.Discrete'
                         'action space.')
         super().__init__(name, env_spec)
         self.obs_dim = env_spec.observation_space.flat_dim
