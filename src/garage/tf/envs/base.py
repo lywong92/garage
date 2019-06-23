@@ -1,7 +1,7 @@
-from akro.tf import Box
-from akro.tf import Dict
-from akro.tf import Discrete
-from akro.tf import Tuple
+from akro import Box
+from akro import Dict
+from akro import Discrete
+from akro import Tuple
 from cached_property import cached_property
 from gym.spaces import Box as GymBox
 from gym.spaces import Dict as GymDict
@@ -29,10 +29,10 @@ class TfEnv(GarageEnv):
     @overrides
     def _to_akro_space(self, space):
         """
-        Converts a gym.space to a akro.tf space.
+        Converts a gym.space to a akro space.
 
         Returns:
-            space (akro.tf space)
+            space (akro space)
         """
         if isinstance(space, GymBox):
             return Box(low=space.low, high=space.high, dtype=space.dtype)

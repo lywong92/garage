@@ -5,6 +5,7 @@ too low.
 import gym
 import tensorflow as tf
 
+from garage.envs import normalize
 from garage.experiment import LocalRunner
 from garage.np.exploration_strategies import OUStrategy
 from garage.replay_buffer import SimpleReplayBuffer
@@ -19,7 +20,7 @@ class TestDDPG(TfGraphTestCase):
     def test_ddpg_double_pendulum(self):
         """Test DDPG with Double Pendulum environment."""
         with LocalRunner(self.sess) as runner:
-            env = TfEnv(gym.make('InvertedDoublePendulum-v2'))
+            env = TfEnv(normalize(gym.make('InvertedDoublePendulum-v2')))
             action_noise = OUStrategy(env.spec, sigma=0.2)
             policy = ContinuousMLPPolicyWithModel(
                 env_spec=env.spec,
@@ -63,7 +64,7 @@ class TestDDPG(TfGraphTestCase):
         This environment has a [-3, 3] action_space bound.
         """
         with LocalRunner(self.sess) as runner:
-            env = TfEnv(gym.make('InvertedPendulum-v2'))
+            env = TfEnv(normalize(gym.make('InvertedPendulum-v2')))
             action_noise = OUStrategy(env.spec, sigma=0.2)
             policy = ContinuousMLPPolicyWithModel(
                 env_spec=env.spec,
@@ -91,7 +92,7 @@ class TestDDPG(TfGraphTestCase):
                 min_buffer_size=int(1e4),
                 exploration_strategy=action_noise,
             )
-            runner.setup(algo, env, sampler_args={'scale_outputs': True})
+            runner.setup(algo, env)
             last_avg_ret = runner.train(
                 n_epochs=10, n_epoch_cycles=20, batch_size=100)
             assert last_avg_ret > 10
