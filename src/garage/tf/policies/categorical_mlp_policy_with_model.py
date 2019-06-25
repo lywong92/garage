@@ -1,5 +1,5 @@
 """CategoricalMLPPolicy with model."""
-from akro import Discrete
+import akro
 import tensorflow as tf
 
 from garage.misc.overrides import overrides
@@ -56,10 +56,9 @@ class CategoricalMLPPolicyWithModel(StochasticPolicy2):
                  output_w_init=tf.glorot_uniform_initializer(),
                  output_b_init=tf.zeros_initializer(),
                  layer_normalization=False):
-        assert isinstance(
-            env_spec.action_space,
-            Discrete), ('CategoricalMLPPolicy only works with akro.Discrete'
-                        'action space.')
+        assert isinstance(env_spec.action_space, akro.Discrete), (
+            'CategoricalMLPPolicy only works with akro.Discrete action '
+            'space.')
         super().__init__(name, env_spec)
         self.obs_dim = env_spec.observation_space.flat_dim
         self.action_dim = env_spec.action_space.n

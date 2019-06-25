@@ -1,5 +1,5 @@
 """CategoricalGRUPolicy with model."""
-from akro import Discrete
+import akro
 import numpy as np
 import tensorflow as tf
 
@@ -71,7 +71,7 @@ class CategoricalGRUPolicyWithModel(StochasticPolicy2):
                  hidden_state_init_trainable=False,
                  state_include_action=True,
                  layer_normalization=False):
-        if not isinstance(env_spec.action_space, Discrete):
+        if not isinstance(env_spec.action_space, akro.Discrete):
             raise ValueError('CategoricalGRUPolicy only works'
                              'with akro.Discrete action space.')
 
