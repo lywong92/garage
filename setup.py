@@ -4,7 +4,7 @@ from setuptools import setup
 # Required dependencies
 required = [
     # Please keep alphabetized
-    'akro==0.0.3',
+    'akro==0.0.4',
     'boto3',
     'cached_property',
     'click',
