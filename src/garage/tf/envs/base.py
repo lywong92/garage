@@ -1,7 +1,4 @@
-from akro import Box
-from akro import Dict
-from akro import Discrete
-from akro import Tuple
+import akro
 from cached_property import cached_property
 from gym.spaces import Box as GymBox
 from gym.spaces import Dict as GymDict
@@ -35,13 +32,13 @@ class TfEnv(GarageEnv):
             space (akro space)
         """
         if isinstance(space, GymBox):
-            return Box(low=space.low, high=space.high, dtype=space.dtype)
+            return akro.Box(low=space.low, high=space.high, dtype=space.dtype)
         elif isinstance(space, GymDict):
-            return Dict(space.spaces)
+            return akro.Dict(space.spaces)
         elif isinstance(space, GymDiscrete):
-            return Discrete(space.n)
+            return akro.Discrete(space.n)
         elif isinstance(space, GymTuple):
-            return Tuple(list(map(self._to_akro_space, space.spaces)))
+            return akro.Tuple(list(map(self._to_akro_space, space.spaces)))
         else:
             raise NotImplementedError
 

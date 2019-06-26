@@ -1,5 +1,5 @@
 """CategoricalConvPolicy with model."""
-from akro import Discrete
+import akro
 import tensorflow as tf
 
 from garage.misc.overrides import overrides
@@ -77,8 +77,8 @@ class CategoricalConvPolicyWithModel(StochasticPolicy2):
                  layer_normalization=False):
         assert isinstance(
             env_spec.action_space,
-            Discrete), ('CategoricalConvPolicy only works with akro.Discrete'
-                        'action space.')
+            akro.Discrete), ('CategoricalConvPolicy only works with'
+                             'akro.Discrete action space.')
         super().__init__(name, env_spec)
         self.obs_dim = env_spec.observation_space.shape
         self.action_dim = env_spec.action_space.n

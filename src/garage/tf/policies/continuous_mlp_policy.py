@@ -5,7 +5,7 @@ A continuous MLP network can be used as policy method in different RL
 algorithms. It accepts an observation of the environment and predicts an
 action.
 """
-from akro import Box
+import akro
 import tensorflow as tf
 
 from garage.core import Serializable
@@ -49,7 +49,7 @@ class ContinuousMLPPolicy(Policy, LayersPowered, Serializable):
             bn(bool, optional):
                 A bool to indicate whether normalize the layer or not.
         """
-        assert isinstance(env_spec.action_space, Box)
+        assert isinstance(env_spec.action_space, akro.Box)
 
         Serializable.quick_init(self, locals())
         super(ContinuousMLPPolicy, self).__init__(env_spec)

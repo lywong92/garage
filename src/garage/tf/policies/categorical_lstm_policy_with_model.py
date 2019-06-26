@@ -1,5 +1,5 @@
 """CategoricalLSTMPolicy with model."""
-from akro import Discrete
+import akro
 import numpy as np
 import tensorflow as tf
 
@@ -81,7 +81,7 @@ class CategoricalLSTMPolicyWithModel(StochasticPolicy2):
                  state_include_action=True,
                  forget_bias=True,
                  layer_normalization=False):
-        if not isinstance(env_spec.action_space, Discrete):
+        if not isinstance(env_spec.action_space, akro.Discrete):
             raise ValueError('CategoricalLSTMPolicy only works'
                              'with akro.Discrete action space.')
 
