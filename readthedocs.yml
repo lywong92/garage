@@ -5,8 +5,5 @@ build:
 python:
     version: 3.6
     install:
-    - method: pip
+    - method: setuptools
       path: .
-      extra_requirements:
-      - dev
-    system_packages: true
