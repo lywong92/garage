@@ -4,3 +4,8 @@ build:
 
 python:
     version: 3.6
+    install:
+    - method: pip
+      path: .
+      extra_requirements:
+      - dev
